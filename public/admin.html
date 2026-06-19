@@ -393,6 +393,11 @@
     .order-btn:hover { border-color: var(--primary); color: var(--primary); }
     .order-btn:disabled { opacity: 0.3; cursor: default; }
 
+    /* 拖拽排序 */
+    #catTableWrap tr[draggable] { cursor: grab; }
+    #catTableWrap tr.drag-over { background: var(--primary-light); outline: 2px dashed var(--primary); }
+    .drag-handle { cursor: grab !important; }
+
     /* ===== 弹窗 ===== */
     .modal-overlay {
       display: none;
@@ -898,44 +903,86 @@
     if (kw) cats = cats.filter(function(c) { return c.name.toLowerCase().indexOf(kw) !== -1; });
     var dishes = await DB.getDishes();
 
-    let tbody = cats.length === 0
-      ? '<tr class="empty-row"><td colspan="6">暂无分类数据</td></tr>'
-      : cats.map((c, idx) => {
-          const cnt = dishes.filter(d => d.categoryId === c.id).length;
-          return `<tr>
-            <td><strong>${c.name}</strong></td>
-            <td>${c.enabled
+    var tbody = cats.length === 0
+      ? '<tr class="empty-row"><td colspan="7">暂无分类数据</td></tr>'
+      : cats.map(function(c, idx) {
+          var cnt = dishes.filter(function(d) { return d.categoryId === c.id; }).length;
+          return '<tr draggable="true" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropCat(event)" ondragend="dragEnd(event)" data-cat-id="' + c.id + '" data-cat-idx="' + idx + '">' +
+            '<td class="drag-handle" style="cursor:grab;text-align:center;font-size:20px;color:#999;user-select:none">⋮⋮</td>' +
+            '<td><strong>' + c.name + '</strong></td>' +
+            '<td>' + (c.enabled
               ? '<span class="badge badge-success">✓ 启用</span>'
-              : '<span class="badge badge-danger">✗ 禁用</span>'}</td>
-            <td>${cnt} 道菜品</td>
-            <td>第 ${c.order} 位</td>
-            <td>
-              <div class="order-btns">
-                <button class="order-btn" onclick="moveCat(${c.id},'up')" ${idx===0?'disabled':''}>↑</button>
-                <button class="order-btn" onclick="moveCat(${c.id},'down')" ${idx===cats.length-1?'disabled':''}>↓</button>
-              </div>
-            </td>
-            <td>
-              <div style="display:flex;gap:6px">
-                <button class="btn btn-outline btn-sm" onclick="openCatModal(${c.id})">编辑</button>
-                <button class="btn btn-sm" style="background:${c.enabled?'#FFF8E1;color:#b8860b':'#E8F8ED;color:#1a8a40'}" onclick="toggleCat(${c.id})">
-                  ${c.enabled ? '禁用' : '启用'}
-                </button>
-                <button class="btn btn-danger btn-sm" onclick="delCat(${c.id},'${c.name}')">删除</button>
-              </div>
-            </td>
-          </tr>`;
+              : '<span class="badge badge-danger">✗ 禁用</span>') + '</td>' +
+            '<td>' + cnt + ' 道菜品</td>' +
+            '<td>第 ' + c.order + ' 位</td>' +
+            '<td>' +
+              '<div style="display:flex;gap:6px">' +
+                '<button class="btn btn-outline btn-sm" onclick="openCatModal(' + c.id + ')">编辑</button>' +
+                '<button class="btn btn-sm" style="background:' + (c.enabled ? '#FFF8E1;color:#b8860b' : '#E8F8ED;color:#1a8a40') + '" onclick="toggleCat(' + c.id + ')">' +
+                  (c.enabled ? '禁用' : '启用') +
+                '</button>' +
+                '<button class="btn btn-danger btn-sm" onclick="delCat(' + c.id + ',\'' + c.name + '\')">删除</button>' +
+              '</div>' +
+            '</td>' +
+          '</tr>';
         }).join('');
 
-    document.getElementById('catTableWrap').innerHTML = `
-      <table>
-        <thead><tr><th>分类名称</th><th>状态</th><th>菜品数量</th><th>排序</th><th>调整排序</th><th>操作</th></tr></thead>
-        <tbody>${tbody}</tbody>
-      </table>
-    `;
+    document.getElementById('catTableWrap').innerHTML =
+      '<table>' +
+        '<thead><tr><th style="width:40px"></th><th>分类名称</th><th>状态</th><th>菜品数量</th><th>排序</th><th>操作</th></tr></thead>' +
+        '<tbody>' + tbody + '</tbody>' +
+      '</table>';
   }
 
-  async function openCatModal(id) {
+  // ===== 拖拽排序 =====
+  var dragRow = null;
+
+  window.dragStart = function(e) {
+    dragRow = e.target.closest('tr');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', '');
+    dragRow.style.opacity = '0.5';
+  };
+
+  window.dragOver = function(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    var target = e.target.closest('tr');
+    if (target && target !== dragRow && target.dataset.catId) {
+      var rect = target.getBoundingClientRect();
+      if (e.clientY - rect.top < rect.height / 2) {
+        target.parentNode.insertBefore(dragRow, target);
+      } else {
+        target.parentNode.insertBefore(dragRow, target.nextSibling);
+      }
+    }
+  };
+
+  window.dropCat = async function(e) {
+    e.preventDefault();
+    if (!dragRow) return;
+
+    // 获取新顺序：收集所有行的 cat-id
+    var rows = document.querySelectorAll('#catTableWrap tbody tr[data-cat-id]');
+    var newOrder = [];
+    for (var i = 0; i < rows.length; i++) {
+      newOrder.push(parseInt(rows[i].dataset.catId));
+    }
+
+    // 更新数据库中的排序
+    for (var j = 0; j < newOrder.length; j++) {
+      await DB.updateCategory(newOrder[j], { order: j + 1 });
+    }
+
+    // 刷新列表
+    renderCategoryList();
+    showToast('排序已更新');
+  };
+
+  window.dragEnd = function(e) {
+    if (dragRow) dragRow.style.opacity = '1';
+    dragRow = null;
+  };
     var cats = await DB.getCategories();
     var cat = id ? cats.find(function(c) { return c.id === id; }) : null;
     editingId = id || null;
@@ -1174,7 +1221,7 @@
     for (var i = 0; i < keepImageUrls.length; i++) {
       var el = document.createElement('div');
       el.className = 'img-preview-item';
-      el.innerHTML = '<img src="' + keepImageUrls[i] + '" alt="图'+(i+1)+'" /><button class="img-preview-del" onclick="removeKeepImg(' + i + ')">✕</button>';
+      el.innerHTML = '<img src="' + keepImageUrls[i] + '" alt="图'+(i+1)+'" onclick="event.stopPropagation();openPreview(\'' + keepImageUrls[i] + '\',\'图片预览\')" style="cursor:pointer" /><button class="img-preview-del" onclick="removeKeepImg(' + i + ')">✕</button>';
       list.appendChild(el);
     }
     // 再渲染新上传的文件预览
@@ -1182,7 +1229,7 @@
       var url = URL.createObjectURL(pendingImageFiles[j]);
       var el2 = document.createElement('div');
       el2.className = 'img-preview-item';
-      el2.innerHTML = '<img src="' + url + '" alt="新图'+(j+1)+'" /><button class="img-preview-del" onclick="removeNewImg(' + j + ')">✕</button>';
+      el2.innerHTML = '<img src="' + url + '" alt="新图'+(j+1)+'" onclick="event.stopPropagation();openPreview(\'' + url + '\',\'图片预览\')" style="cursor:pointer" /><button class="img-preview-del" onclick="removeNewImg(' + j + ')">✕</button>';
       list.appendChild(el2);
     }
 
