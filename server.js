@@ -1,6 +1,6 @@
 /**
  * 美食册子 - 后端服务器（Supabase 版）
- * Express + Supabase PostgreSQL + multer 图片上传
+ * Express + Supabase PostgreSQL + Supabase Storage 图片存储
  */
 
 const express = require('express');
@@ -16,33 +16,31 @@ const PORT = process.env.PORT || 3000;
 const supabaseUrl = process.env.SUPABASE_URL || 'https://mptmpholnizmbxmimxhn.supabase.co';
 const supabaseKey = process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wdG1waG9sbml6bWJ4bWlteGhuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4NTE3MzgsImV4cCI6MjA5NzQyNzczOH0.RC5rXrt6GpwTVldoErnPbbQnoZDHwfp3Dr8bB8RnKIE';
 const supabase = createClient(supabaseUrl, supabaseKey);
+const BUCKET = 'dishes';
 
 // ============ 中间件 ============
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 图片上传（本地临时存储，后续可迁移到 Supabase Storage）
-const uploadsDir = path.join(__dirname, 'uploads');
-const fs = require('fs');
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-app.use('/uploads', express.static(uploadsDir));
+// 图片上传：内存存储 → 上传到 Supabase Storage
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
-const storage = multer.diskStorage({
-  destination: uploadsDir,
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, 'dish_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6) + ext);
-  }
-});
-const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) cb(null, true);
-    else cb(new Error('仅支持图片文件'));
-  }
-});
+/** 将 multer 文件上传到 Supabase Storage，返回公开访问 URL */
+async function uploadToStorage(file) {
+  const ext = path.extname(file.originalname);
+  const filename = 'dish_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6) + ext;
+  const { error } = await supabase.storage.from(BUCKET).upload(filename, file.buffer, {
+    contentType: file.mimetype, upsert: false
+  });
+  if (error) throw error;
+  return supabase.storage.from(BUCKET).getPublicUrl(filename).data.publicUrl;
+}
+
+// ============ 中间件 ============
+app.use(cors());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // ============ API 路由 ============
 
@@ -165,7 +163,16 @@ app.post('/api/dishes', upload.array('images', 10), async (req, res) => {
     const { data: maxData } = await supabase.from('dishes').select('order')
       .eq('category_id', catId).order('order', { ascending: false }).limit(1);
     const maxOrder = (maxData && maxData.length > 0) ? maxData[0].order : 0;
-    const images = (req.files || []).map(f => '/uploads/' + f.filename);
+
+    // 上传图片到 Supabase Storage
+    const images = [];
+    if (req.files && req.files.length > 0) {
+      for (const f of req.files) {
+        const url = await uploadToStorage(f);
+        images.push(url);
+      }
+    }
+
     const dish = {
       category_id: catId, name, status: status || 'on',
       images, order: maxOrder + 1,
@@ -188,12 +195,17 @@ app.put('/api/dishes/:id', upload.array('images', 10), async (req, res) => {
     if (req.body.name) updates.name = req.body.name;
     if (req.body.status) updates.status = req.body.status;
 
-    // 图片：保留旧图 + 新上传图
+    // 图片：保留旧图 + 新上传到 Storage
     if (req.body.keepImages) {
       try { updates.images = JSON.parse(req.body.keepImages); } catch (e) { updates.images = []; }
     }
     if (req.files && req.files.length > 0) {
-      updates.images = (updates.images || []).concat(req.files.map(f => '/uploads/' + f.filename));
+      const newUrls = [];
+      for (const f of req.files) {
+        const url = await uploadToStorage(f);
+        newUrls.push(url);
+      }
+      updates.images = (updates.images || []).concat(newUrls);
     }
 
     const { data, error } = await supabase.from('dishes').update(updates)
