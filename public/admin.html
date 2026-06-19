@@ -714,18 +714,19 @@
       var result = await DB.login(u, p);
       currentUser = result.admin;
     } catch (e) {
-      document.getElementById('loginErr').textContent = '用户名或密码错误，请重试';
+      document.getElementById('loginErr').textContent = '登录失败: ' + (e.message || '网络错误');
       return;
     }
     if (!currentUser) {
-      document.getElementById('loginErr').textContent = '用户名或密码错误，请重试';
+      document.getElementById('loginErr').textContent = '用户名或密码错误';
       return;
     }
     document.getElementById('loginPage').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
     document.getElementById('sidebarName').textContent = currentUser.name;
     document.getElementById('sidebarAvatar').textContent = currentUser.name[0];
-    switchPage('dashboard', document.querySelector('.nav-item[data-page="dashboard"]'));
+    var dashEl = document.querySelector('.nav-item[data-page="dashboard"]');
+    if (dashEl) switchPage('dashboard', dashEl);
   }
 
   function doLogout() {
