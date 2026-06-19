@@ -398,6 +398,20 @@
     #catTableWrap tr.drag-over { background: var(--primary-light); outline: 2px dashed var(--primary); }
     .drag-handle { cursor: grab !important; }
 
+    /* 图片预览浮层 */
+    .img-preview-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92);
+      z-index: 1100; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 20px;
+    }
+    .img-preview-overlay.show { display: flex; }
+    .img-preview-full { max-width: 94vw; max-height: 80vh; border-radius: 8px; object-fit: contain; }
+    .img-preview-close {
+      position: absolute; top: 16px; right: 16px;
+      width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.15);
+      color: #fff; border: none; font-size: 20px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; z-index: 1;
+    }
+
     /* ===== 弹窗 ===== */
     .modal-overlay {
       display: none;
@@ -678,6 +692,12 @@
   </div>
 </div>
 
+<!-- 图片预览浮层 -->
+<div class="img-preview-overlay" id="imgPreviewOverlay" onclick="closeImgPreview()">
+  <button class="img-preview-close" onclick="closeImgPreview()">✕</button>
+  <img class="img-preview-full" id="imgPreviewFull" src="" alt="" />
+</div>
+
 <!-- Toast 容器 -->
 <div class="toast-container" id="toastContainer"></div>
 
@@ -934,6 +954,17 @@
         '<tbody>' + tbody + '</tbody>' +
       '</table>';
   }
+
+  // ===== 图片预览 =====
+  function openPreview(src) {
+    document.getElementById('imgPreviewFull').src = src;
+    document.getElementById('imgPreviewOverlay').classList.add('show');
+  }
+  function closeImgPreview() {
+    document.getElementById('imgPreviewOverlay').classList.remove('show');
+  }
+  window.openPreview = openPreview;
+  window.closeImgPreview = closeImgPreview;
 
   // ===== 拖拽排序 =====
   var dragRow = null;
