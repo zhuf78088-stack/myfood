@@ -964,10 +964,12 @@
     renderCategoryList();
   }
 
-  function toggleCat(id) {
-    const cat = DB.getCategories().find(c => c.id === id);
-    DB.updateCategory(id, { enabled: !cat.enabled });
-    showToast(cat.enabled ? '分类已禁用' : '分类已启用');
+  async function toggleCat(id) {
+    var cats = await DB.getCategories();
+    var cat = cats.find(function(c) { return c.id === id; });
+    var newEnabled = !cat.enabled;
+    await DB.updateCategory(id, { enabled: newEnabled });
+    showToast(newEnabled ? '分类已启用' : '分类已禁用');
     renderCategoryList();
   }
 
