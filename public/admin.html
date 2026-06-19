@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>美食册子 - 管理后台</title>
+  <style>
+    :root {
+      --primary: #E8652A;
+      --primary-light: #FFF3ED;
+      --primary-dark: #C94E18;
+      --accent: #F4A34B;
+      --success: #28a745;
+      --danger: #dc3545;
+      --warning: #ffc107;
+      --info: #17a2b8;
+      --text-main: #2D1A0E;
+      --text-sub: #6C4A35;
+      --text-muted: #9E7A65;
+      --bg: #F8F4F0;
+      --sidebar-bg: #2D1A0E;
+      --sidebar-hover: rgba(255,255,255,0.08);
+      --sidebar-active: rgba(232,101,42,0.2);
+      --card-bg: #FFFFFF;
+      --border: #EDE0D5;
+      --shadow: 0 2px 8px rgba(0,0,0,0.08);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --sidebar-w: 220px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ===== 登录页 ===== */
+    #loginPage {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(135deg, #2D1A0E 0%, #5C3520 40%, #E8652A 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .login-card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 40px 36px;
+      width: 360px;
+      box-shadow: var(--shadow-lg);
+      text-align: center;
+    }
+    .login-logo { font-size: 48px; margin-bottom: 8px; }
+    .login-title { font-size: 22px; font-weight: 700; color: var(--text-main); margin-bottom: 4px; }
+    .login-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 28px; }
+    .form-item { margin-bottom: 16px; text-align: left; }
+    .form-item label { display: block; font-size: 13px; font-weight: 600; color: var(--text-sub); margin-bottom: 6px; }
+    .form-input {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+      color: var(--text-main);
+    }
+    .form-input:focus { border-color: var(--primary); }
+    .login-btn {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: opacity 0.2s;
+    }
+    .login-btn:hover { opacity: 0.92; }
+    .login-hint { font-size: 12px; color: var(--text-muted); margin-top: 14px; }
+    .login-err { color: var(--danger); font-size: 13px; margin-top: 8px; min-height: 18px; }
+
+    /* ===== 主布局 ===== */
+    #app { display: flex; height: 100vh; }
+
+    /* 侧边栏 */
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--sidebar-bg);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255,255,255,0.1) transparent;
+    }
+    .sidebar-head {
+      padding: 20px 16px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .sidebar-logo { display: flex; align-items: center; gap: 10px; }
+    .sidebar-logo-icon {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+    }
+    .sidebar-logo-text { color: #fff; font-size: 16px; font-weight: 700; }
+    .sidebar-logo-sub { color: rgba(255,255,255,0.45); font-size: 11px; margin-top: 1px; }
+
+    .sidebar-section { padding: 16px 8px 8px; }
+    .sidebar-section-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.3);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 0 8px;
+      margin-bottom: 6px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      color: rgba(255,255,255,0.65);
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.15s;
+      margin-bottom: 2px;
+    }
+    .nav-item:hover { background: var(--sidebar-hover); color: rgba(255,255,255,0.9); }
+    .nav-item.active { background: var(--sidebar-active); color: var(--accent); font-weight: 600; }
+    .nav-item-icon { font-size: 16px; width: 20px; text-align: center; }
+    .nav-badge {
+      margin-left: auto;
+      background: var(--primary);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 10px;
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding: 16px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .user-avatar {
+      width: 34px; height: 34px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; color: #fff; font-weight: 700; flex-shrink: 0;
+    }
+    .user-name { color: rgba(255,255,255,0.85); font-size: 13px; font-weight: 600; }
+    .user-role { color: rgba(255,255,255,0.4); font-size: 11px; }
+    .logout-btn {
+      width: 100%;
+      padding: 8px;
+      background: rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.6);
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .logout-btn:hover { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.9); }
+
+    /* 主内容区 */
+    .main-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .top-bar {
+      background: var(--card-bg);
+      padding: 0 24px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      box-shadow: 0 1px 0 var(--border);
+      flex-shrink: 0;
+    }
+    .top-bar-title { font-size: 18px; font-weight: 700; color: var(--text-main); }
+    .top-bar-right { display: flex; align-items: center; gap: 12px; }
+    .h5-link {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 13px;
+      color: var(--primary);
+      text-decoration: none;
+      padding: 6px 12px;
+      border: 1.5px solid var(--primary);
+      border-radius: 20px;
+      transition: all 0.15s;
+    }
+    .h5-link:hover { background: var(--primary-light); }
+
+    .content-panel {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+    }
+
+    /* ===== 通用组件 ===== */
+    /* 卡片 */
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .card-title { font-size: 16px; font-weight: 700; color: var(--text-main); }
+
+    /* 统计卡片 */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .stat-icon {
+      width: 48px; height: 48px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+    }
+    .stat-icon.orange { background: #FFF0E8; }
+    .stat-icon.green { background: #E8F8ED; }
+    .stat-icon.blue { background: #E8F4FF; }
+    .stat-icon.purple { background: #F0E8FF; }
+    .stat-num { font-size: 26px; font-weight: 700; color: var(--text-main); }
+    .stat-label { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+    /* 按钮 */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      border: none;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text-sub); }
+    .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+    .btn-icon { padding: 7px; }
+
+    /* 表格 */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { background: #FBF5F0; }
+    th {
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      white-space: nowrap;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 12px 14px;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-main);
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #FBF5F0; }
+
+    /* 徽章 */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-success { background: #E8F8ED; color: #1a8a40; }
+    .badge-danger { background: #FEE; color: #c0392b; }
+    .badge-warning { background: #FFF8E1; color: #b8860b; }
+    .badge-default { background: #F0EFEE; color: var(--text-muted); }
+
+    /* 搜索/过滤栏 */
+    .filter-bar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+      align-items: center;
+    }
+    .filter-input {
+      padding: 8px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      outline: none;
+      color: var(--text-main);
+      min-width: 180px;
+    }
+    .filter-input:focus { border-color: var(--primary); }
+    .filter-select {
+      padding: 8px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      outline: none;
+      color: var(--text-main);
+      background: #fff;
+      cursor: pointer;
+    }
+    .filter-select:focus { border-color: var(--primary); }
+
+    /* 菜品图片缩略图 */
+    .dish-thumb {
+      width: 44px; height: 44px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: #F5EDE5;
+    }
+    .dish-thumb-placeholder {
+      width: 44px; height: 44px;
+      border-radius: 8px;
+      background: #FFF0E8;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+
+    /* 排序按钮 */
+    .order-btns { display: flex; gap: 2px; }
+    .order-btn {
+      padding: 3px 7px;
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 4px;
+      font-size: 11px;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+    .order-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .order-btn:disabled { opacity: 0.3; cursor: default; }
+
+    /* ===== 弹窗 ===== */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 5000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: var(--shadow-lg);
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-head {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-title { font-size: 16px; font-weight: 700; }
+    .modal-close {
+      width: 30px; height: 30px;
+      border: none;
+      background: var(--bg);
+      border-radius: 50%;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-muted);
+    }
+    .modal-body {
+      padding: 20px 24px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .modal-foot {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    /* 表单 */
+    .field { margin-bottom: 16px; }
+    .field label { display: block; font-size: 13px; font-weight: 600; color: var(--text-sub); margin-bottom: 6px; }
+    .field-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      outline: none;
+      color: var(--text-main);
+      transition: border-color 0.2s;
+    }
+    .field-input:focus { border-color: var(--primary); }
+    .field-select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      outline: none;
+      color: var(--text-main);
+      background: #fff;
+      cursor: pointer;
+    }
+    .field-select:focus { border-color: var(--primary); }
+    .field-hint { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+    /* 图片上传区 */
+    .img-upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s;
+      position: relative;
+    }
+    .img-upload-zone:hover { border-color: var(--primary); }
+    .img-upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .img-upload-icon { font-size: 28px; margin-bottom: 6px; color: var(--text-muted); }
+    .img-upload-text { font-size: 13px; color: var(--text-muted); }
+
+    .img-preview-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .img-preview-item {
+      position: relative;
+      width: 72px; height: 72px;
+    }
+    .img-preview-item img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .img-preview-del {
+      position: absolute;
+      top: -6px; right: -6px;
+      width: 20px; height: 20px;
+      background: var(--danger);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      font-size: 11px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* Toast 提示 */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .toast {
+      padding: 12px 18px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #fff;
+      box-shadow: var(--shadow-lg);
+      animation: slideIn 0.3s ease;
+      max-width: 280px;
+    }
+    .toast-success { background: var(--success); }
+    .toast-error { background: var(--danger); }
+    .toast-info { background: var(--info); }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    /* 确认弹窗 */
+    .confirm-modal { max-width: 360px; }
+    .confirm-text { font-size: 14px; color: var(--text-sub); line-height: 1.7; }
+
+    /* 空态 */
+    .empty-row td {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    /* 分页 */
+    .pagination {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 6px;
+      padding: 12px 0 0;
+    }
+    .page-btn {
+      padding: 6px 12px;
+      border: 1.5px solid var(--border);
+      background: #fff;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--text-sub);
+    }
+    .page-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .page-btn:disabled { opacity: 0.4; cursor: default; }
+    .page-info { font-size: 12px; color: var(--text-muted); margin-right: 4px; }
+
+    /* 滚动条美化 */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-thumb { background: #ddd; border-radius: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+  </style>
+</head>
+<body>
+
+<!-- 登录页 -->
+<div id="loginPage">
+  <div class="login-card">
+    <div class="login-logo">🍜</div>
+    <div class="login-title">美食册子</div>
+    <div class="login-sub">后台管理系统</div>
+    <div class="form-item">
+      <label>用户名</label>
+      <input class="form-input" id="loginUser" type="text" placeholder="请输入用户名" value="admin" />
+    </div>
+    <div class="form-item">
+      <label>密码</label>
+      <input class="form-input" id="loginPass" type="password" placeholder="请输入密码" value="admin123" onkeydown="if(event.key==='Enter')doLogin()" />
+    </div>
+    <button class="login-btn" onclick="doLogin()">登 录</button>
+    <div class="login-err" id="loginErr"></div>
+    <div class="login-hint">默认账号：admin / admin123</div>
+  </div>
+</div>
+
+<!-- 主布局 -->
+<div id="app" style="display:none">
+  <!-- 侧边栏 -->
+  <aside class="sidebar">
+    <div class="sidebar-head">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">🍜</div>
+        <div>
+          <div class="sidebar-logo-text">美食册子</div>
+          <div class="sidebar-logo-sub">运营管理后台</div>
+        </div>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">主菜单</div>
+      <div class="nav-item active" data-page="dashboard" onclick="switchPage('dashboard',this)">
+        <span class="nav-item-icon">📊</span> 数据概览
+      </div>
+      <div class="nav-item" data-page="category" onclick="switchPage('category',this)">
+        <span class="nav-item-icon">📂</span> 菜品分类
+      </div>
+      <div class="nav-item" data-page="dish" onclick="switchPage('dish',this)">
+        <span class="nav-item-icon">🍽️</span> 菜品管理
+      </div>
+      <div class="nav-item" data-page="user" onclick="switchPage('user',this)">
+        <span class="nav-item-icon">👤</span> 用户管理
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar" id="sidebarAvatar">A</div>
+        <div>
+          <div class="user-name" id="sidebarName">管理员</div>
+          <div class="user-role">超级管理员</div>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="doLogout()">⬡ 退出登录</button>
+    </div>
+  </aside>
+
+  <!-- 主内容 -->
+  <div class="main-area">
+    <div class="top-bar">
+      <div class="top-bar-title" id="pageTitle">数据概览</div>
+      <div class="top-bar-right">
+        <a href="index.html" target="_blank" class="h5-link">🔗 查看H5展示端</a>
+      </div>
+    </div>
+    <div class="content-panel" id="contentPanel">
+      <!-- 内容由 JS 动态渲染 -->
+    </div>
+  </div>
+</div>
+
+<!-- 弹窗区域 -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="modalTitle">弹窗</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-foot" id="modalFoot"></div>
+  </div>
+</div>
+
+<!-- Toast 容器 -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="data.js"></script>
+<script>
+  /* ========================
+     全局状态
+  ======================== */
+  let currentUser = null;
+  let currentPage = 'dashboard';
+  let editingId = null;
+  let keepImageUrls = [];      // 编辑时保留的服务器图片 URL
+  let pendingImageFiles = [];  // 待上传的 File 对象
+
+  /* 根据图片标识获取可用于 <img src="..."> 的值（所有图片均为 URL） */
+  function resolveImageSrc(pic) {
+    return pic || null;
+  }
+
+  let dishFilter = { keyword: '', categoryId: '', status: '' };
+  let userFilter = '';
+  const PAGE_SIZE = 10;
+  let dishPage = 1;
+  let userPage = 1;
+  let catPage = 1;
+
+  /* ========================
+     登录 / 登出
+  ======================== */
+  async function doLogin() {
+    var u = document.getElementById('loginUser').value.trim();
+    var p = document.getElementById('loginPass').value.trim();
+    try {
+      var result = await DB.login(u, p);
+      currentUser = result.admin;
+    } catch (e) {
+      document.getElementById('loginErr').textContent = '用户名或密码错误，请重试';
+      return;
+    }
+    if (!currentUser) {
+      document.getElementById('loginErr').textContent = '用户名或密码错误，请重试';
+      return;
+    }
+    document.getElementById('loginPage').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    document.getElementById('sidebarName').textContent = currentUser.name;
+    document.getElementById('sidebarAvatar').textContent = currentUser.name[0];
+    switchPage('dashboard', document.querySelector('.nav-item[data-page="dashboard"]'));
+  }
+
+  function doLogout() {
+    currentUser = null;
+    document.getElementById('loginPage').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('loginErr').textContent = '';
+  }
+
+  /* ========================
+     页面切换
+  ======================== */
+  const pageTitles = { dashboard: '数据概览', category: '菜品分类管理', dish: '菜品管理', user: '用户管理' };
+
+  async function switchPage(page, el) {
+    currentPage = page;
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('pageTitle').textContent = pageTitles[page];
+    if (page === 'dashboard') await renderDashboard();
+    else if (page === 'category') await renderCategoryPage();
+    else if (page === 'dish') await renderDishPage();
+    else if (page === 'user') await renderUserPage();
+  }
+
+  /* ========================
+     Toast 提示
+  ======================== */
+  function showToast(msg, type = 'success') {
+    const box = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    t.className = `toast toast-${type}`;
+    t.textContent = msg;
+    box.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.4s'; }, 2200);
+    setTimeout(() => t.remove(), 2700);
+  }
+
+  /* ========================
+     弹窗工具
+  ======================== */
+  function openModal(title, body, foot) {
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalBody').innerHTML = body;
+    document.getElementById('modalFoot').innerHTML = foot;
+    document.getElementById('modalOverlay').classList.add('show');
+  }
+  function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('show');
+    keepImageUrls = [];
+    pendingImageFiles = [];
+    editingId = null;
+  }
+
+  function confirmDlg(msg, onOk) {
+    openModal(
+      '确认操作',
+      `<div class="confirm-text">${msg}</div>`,
+      `<button class="btn btn-outline" onclick="closeModal()">取消</button>
+       <button class="btn btn-danger" id="confirmOkBtn">确认删除</button>`
+    );
+    document.getElementById('confirmOkBtn').onclick = () => { closeModal(); onOk(); };
+  }
+
+  /* ========================
+     数据概览
+  ======================== */
+  async function renderDashboard() {
+    var cats = await DB.getCategories();
+    var dishes = await DB.getDishes();
+    var onDishes = dishes.filter(d => d.status === 'on').length;
+    var offDishes = dishes.filter(d => d.status === 'off').length;
+    var admins = await DB.getAdmins();
+
+    // 最新菜品（最近5条）
+    const latest = [...dishes].sort((a,b) => b.id - a.id).slice(0, 5);
+
+    document.getElementById('contentPanel').innerHTML = `
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon orange">🍽️</div>
+          <div><div class="stat-num">${dishes.length}</div><div class="stat-label">菜品总数</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon green">✅</div>
+          <div><div class="stat-num">${onDishes}</div><div class="stat-label">已上架菜品</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon blue">📂</div>
+          <div><div class="stat-num">${cats.filter(c=>c.enabled).length}</div><div class="stat-label">启用分类</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon purple">👤</div>
+          <div><div class="stat-num">${admins.length}</div><div class="stat-label">管理员账号</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">分类菜品概览</div>
+          <button class="btn btn-primary btn-sm" onclick="switchPage('dish', document.querySelector('.nav-item[data-page=dish]'))">管理菜品</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>分类名称</th><th>状态</th><th>菜品数</th><th>已上架</th><th>操作</th></tr></thead>
+            <tbody>
+              ${cats.map(c => {
+                const cnt = dishes.filter(d => d.categoryId === c.id).length;
+                const onCnt = dishes.filter(d => d.categoryId === c.id && d.status === 'on').length;
+                return `<tr>
+                  <td><strong>${c.name}</strong></td>
+                  <td>${c.enabled
+                    ? '<span class="badge badge-success">✓ 启用</span>'
+                    : '<span class="badge badge-danger">✗ 禁用</span>'}</td>
+                  <td>${cnt}</td>
+                  <td>${onCnt}</td>
+                  <td><button class="btn btn-outline btn-sm" onclick="switchPage('dish',document.querySelector('.nav-item[data-page=dish]'));setTimeout(()=>{document.getElementById('dishCatFilter').value='${c.id}';applyDishFilter()},100)">查看菜品</button></td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">最新录入菜品</div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>图片</th><th>名称</th><th>分类</th><th>状态</th><th>录入时间</th></tr></thead>
+            <tbody>
+              ${latest.length === 0
+                ? '<tr class="empty-row"><td colspan="5">暂无菜品数据</td></tr>'
+                : latest.map(d => {
+                    const cat = cats.find(c => c.id === d.categoryId);
+                    const img = d.images && d.images[0] ? `<img class="dish-thumb" src="${d.images[0]}" alt="" onerror="this.outerHTML='<div class=dish-thumb-placeholder>🍽️</div>'" />` : '<div class="dish-thumb-placeholder">🍽️</div>';
+                    return `<tr>
+                      <td>${img}</td>
+                      <td><strong>${d.name}</strong></td>
+                      <td>${cat ? `<span class="badge badge-default">${cat.name}</span>` : '-'}</td>
+                      <td>${d.status === 'on' ? '<span class="badge badge-success">上架</span>' : '<span class="badge badge-danger">下架</span>'}</td>
+                      <td>${d.createdAt || '-'}</td>
+                    </tr>`;
+                  }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  /* ========================
+     菜品分类管理
+  ======================== */
+  function renderCategoryPage() {
+    document.getElementById('contentPanel').innerHTML = `
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">分类列表</div>
+          <button class="btn btn-primary" onclick="openCatModal()">＋ 新增分类</button>
+        </div>
+        <div class="filter-bar">
+          <input class="filter-input" id="catKeyword" placeholder="搜索分类名称..." oninput="renderCategoryList()" />
+        </div>
+        <div class="table-wrap" id="catTableWrap"></div>
+      </div>
+    `;
+    renderCategoryList();
+  }
+
+  async function renderCategoryList() {
+    var kw = (document.getElementById('catKeyword') ? document.getElementById('catKeyword').value : '').toLowerCase();
+    var cats = await DB.getCategories();
+    if (kw) cats = cats.filter(function(c) { return c.name.toLowerCase().indexOf(kw) !== -1; });
+    var dishes = await DB.getDishes();
+
+    let tbody = cats.length === 0
+      ? '<tr class="empty-row"><td colspan="6">暂无分类数据</td></tr>'
+      : cats.map((c, idx) => {
+          const cnt = dishes.filter(d => d.categoryId === c.id).length;
+          return `<tr>
+            <td><strong>${c.name}</strong></td>
+            <td>${c.enabled
+              ? '<span class="badge badge-success">✓ 启用</span>'
+              : '<span class="badge badge-danger">✗ 禁用</span>'}</td>
+            <td>${cnt} 道菜品</td>
+            <td>第 ${c.order} 位</td>
+            <td>
+              <div class="order-btns">
+                <button class="order-btn" onclick="moveCat(${c.id},'up')" ${idx===0?'disabled':''}>↑</button>
+                <button class="order-btn" onclick="moveCat(${c.id},'down')" ${idx===cats.length-1?'disabled':''}>↓</button>
+              </div>
+            </td>
+            <td>
+              <div style="display:flex;gap:6px">
+                <button class="btn btn-outline btn-sm" onclick="openCatModal(${c.id})">编辑</button>
+                <button class="btn btn-sm" style="background:${c.enabled?'#FFF8E1;color:#b8860b':'#E8F8ED;color:#1a8a40'}" onclick="toggleCat(${c.id})">
+                  ${c.enabled ? '禁用' : '启用'}
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="delCat(${c.id},'${c.name}')">删除</button>
+              </div>
+            </td>
+          </tr>`;
+        }).join('');
+
+    document.getElementById('catTableWrap').innerHTML = `
+      <table>
+        <thead><tr><th>分类名称</th><th>状态</th><th>菜品数量</th><th>排序</th><th>调整排序</th><th>操作</th></tr></thead>
+        <tbody>${tbody}</tbody>
+      </table>
+    `;
+  }
+
+  async function openCatModal(id) {
+    var cats = await DB.getCategories();
+    var cat = id ? cats.find(function(c) { return c.id === id; }) : null;
+    editingId = id || null;
+    openModal(
+      id ? '编辑分类' : '新增分类',
+      `<div class="field">
+        <label>分类名称 <span style="color:var(--danger)">*</span></label>
+        <input class="field-input" id="catNameInput" placeholder="请输入分类名称" value="${cat ? cat.name : ''}" />
+      </div>`,
+      `<button class="btn btn-outline" onclick="closeModal()">取消</button>
+       <button class="btn btn-primary" onclick="saveCat()">保存</button>`
+    );
+  }
+
+  function saveCat() {
+    const name = document.getElementById('catNameInput').value.trim();
+    if (!name) { showToast('请输入分类名称', 'error'); return; }
+    if (editingId) {
+      DB.updateCategory(editingId, { name });
+      showToast('分类已更新');
+    } else {
+      DB.addCategory(name);
+      showToast('分类新增成功');
+    }
+    closeModal();
+    renderCategoryList();
+  }
+
+  function toggleCat(id) {
+    const cat = DB.getCategories().find(c => c.id === id);
+    DB.updateCategory(id, { enabled: !cat.enabled });
+    showToast(cat.enabled ? '分类已禁用' : '分类已启用');
+    renderCategoryList();
+  }
+
+  function delCat(id, name) {
+    const cnt = DB.getDishes({ categoryId: id }).length;
+    confirmDlg(`确认删除分类「${name}」？${cnt > 0 ? `<br><br>⚠️ 该分类下有 <strong>${cnt}</strong> 道菜品，删除分类将<strong>同时删除</strong>所有关联菜品！` : ''}`, () => {
+      DB.deleteCategory(id);
+      showToast('分类已删除');
+      renderCategoryList();
+    });
+  }
+
+  async function moveCat(id, dir) {
+    var cats = await DB.getCategories();
+    var idx = cats.findIndex(function(c) { return c.id === id; });
+    if (dir === 'up' && idx > 0) {
+      var prev = cats[idx - 1];
+      await DB.updateCategory(id, { order: prev.order });
+      await DB.updateCategory(prev.id, { order: cats[idx].order });
+    } else if (dir === 'down' && idx < cats.length - 1) {
+      var next = cats[idx + 1];
+      await DB.updateCategory(id, { order: next.order });
+      await DB.updateCategory(next.id, { order: cats[idx].order });
+    }
+    renderCategoryList();
+  }
+
+  /* ========================
+     菜品管理
+  ======================== */
+  async function renderDishPage() {
+    var cats = await DB.getCategories();
+    document.getElementById('contentPanel').innerHTML = `
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">菜品列表</div>
+          <button class="btn btn-primary" onclick="openDishModal()">＋ 新增菜品</button>
+        </div>
+        <div class="filter-bar">
+          <input class="filter-input" id="dishKeyword" placeholder="搜索菜品名称..." oninput="applyDishFilter()" style="min-width:160px" />
+          <select class="filter-select" id="dishCatFilter" onchange="applyDishFilter()">
+            <option value="">全部分类</option>
+            ${cats.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
+          </select>
+          <select class="filter-select" id="dishStatusFilter" onchange="applyDishFilter()">
+            <option value="">全部状态</option>
+            <option value="on">已上架</option>
+            <option value="off">已下架</option>
+          </select>
+        </div>
+        <div class="table-wrap" id="dishTableWrap"></div>
+        <div class="pagination" id="dishPagination"></div>
+      </div>
+    `;
+    renderDishList();
+  }
+
+  function applyDishFilter() {
+    dishFilter.keyword = document.getElementById('dishKeyword') ? document.getElementById('dishKeyword').value.trim() : '';
+    var catVal = document.getElementById('dishCatFilter') ? document.getElementById('dishCatFilter').value : '';
+    dishFilter.categoryId = catVal ? parseInt(catVal) : '';
+    dishFilter.status = document.getElementById('dishStatusFilter') ? document.getElementById('dishStatusFilter').value : '';
+    dishPage = 1;
+    renderDishList();
+  }
+
+  async function renderDishList() {
+    var cats = await DB.getCategories();
+    var filters = {};
+    if (dishFilter.keyword) filters.keyword = dishFilter.keyword;
+    if (dishFilter.categoryId) filters.categoryId = dishFilter.categoryId;
+    if (dishFilter.status) filters.status = dishFilter.status;
+
+    var allDishes = await DB.getDishes(filters);
+    var total = allDishes.length;
+    var totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    if (dishPage > totalPages) dishPage = totalPages;
+    var paged = allDishes.slice((dishPage - 1) * PAGE_SIZE, dishPage * PAGE_SIZE);
+
+    var tbody = paged.length === 0
+      ? '<tr class="empty-row"><td colspan="7">暂无菜品数据</td></tr>'
+      : paged.map(function(d) {
+          var cat = cats.find(function(c) { return c.id === d.categoryId; });
+          var imgSrc = (d.images && d.images[0]) ? d.images[0] : '';
+          var img = imgSrc
+            ? '<img class="dish-thumb" src="' + imgSrc + '" alt="" onerror="this.outerHTML=\'<div class=dish-thumb-placeholder>🍽️</div>\'" />'
+            : '<div class="dish-thumb-placeholder">🍽️</div>';
+          return '<tr>' +
+            '<td>' + img + '</td>' +
+            '<td><strong>' + d.name + '</strong></td>' +
+            '<td>' + (cat ? '<span class="badge badge-default">' + cat.name + '</span>' : '<span style="color:var(--text-muted)">未分类</span>') + '</td>' +
+            '<td>' + (d.status === 'on'
+              ? '<span class="badge badge-success">上架</span>'
+              : '<span class="badge badge-danger">下架</span>') + '</td>' +
+            '<td>' + (d.images ? d.images.length : 0) + ' 张</td>' +
+            '<td>' + (d.createdAt || '-') + '</td>' +
+            '<td>' +
+              '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+                '<button class="btn btn-outline btn-sm" onclick="openDishModal(' + d.id + ')">编辑</button>' +
+                '<button class="btn btn-sm" style="background:' + (d.status === 'on' ? '#FFF8E1;color:#b8860b' : '#E8F8ED;color:#1a8a40') + '" onclick="toggleDish(' + d.id + ')">' +
+                  (d.status === 'on' ? '下架' : '上架') +
+                '</button>' +
+                '<button class="btn btn-danger btn-sm" onclick="delDish(' + d.id + ',\'' + d.name + '\')">删除</button>' +
+              '</div>' +
+            '</td>' +
+          '</tr>';
+        }).join('');
+
+    document.getElementById('dishTableWrap').innerHTML = `
+      <table>
+        <thead><tr><th>图片</th><th>菜品名称</th><th>所属分类</th><th>状态</th><th>图片数</th><th>录入时间</th><th>操作</th></tr></thead>
+        <tbody>${tbody}</tbody>
+      </table>
+    `;
+
+    // 分页
+    let pages = '';
+    if (total > 0) {
+      pages += `<span class="page-info">共 ${total} 条，第 ${dishPage}/${totalPages} 页</span>`;
+      pages += `<button class="page-btn" onclick="dishPage=1;renderDishList()" ${dishPage<=1?'disabled':''}>«</button>`;
+      pages += `<button class="page-btn" onclick="dishPage--;renderDishList()" ${dishPage<=1?'disabled':''}>‹</button>`;
+      for (let i = Math.max(1, dishPage-2); i <= Math.min(totalPages, dishPage+2); i++) {
+        pages += `<button class="page-btn ${i===dishPage?'active':''}" onclick="dishPage=${i};renderDishList()">${i}</button>`;
+      }
+      pages += `<button class="page-btn" onclick="dishPage++;renderDishList()" ${dishPage>=totalPages?'disabled':''}>›</button>`;
+      pages += `<button class="page-btn" onclick="dishPage=${totalPages};renderDishList()" ${dishPage>=totalPages?'disabled':''}>»</button>`;
+    }
+    document.getElementById('dishPagination').innerHTML = pages;
+  }
+
+  async function openDishModal(id) {
+    var dish = null;
+    if (id) {
+      var all = await DB.getDishes();
+      dish = all.find(function(d) { return d.id === id; });
+    }
+    editingId = id || null;
+    keepImageUrls = dish ? (dish.images || []).slice() : [];
+    pendingImageFiles = [];
+
+    var cats = await DB.getCategories();
+    cats = cats.filter(function(c) { return c.enabled; });
+
+    var catsOpt = cats.map(function(c) {
+      return '<option value="'+c.id+'"' + (dish && dish.categoryId === c.id ? ' selected' : '') + '>'+c.name+'</option>';
+    }).join('');
+
+    openModal(
+      id ? '编辑菜品' : '新增菜品',
+      '<div class="field">' +
+        '<label>所属分类 <span style="color:var(--danger)">*</span></label>' +
+        '<select class="field-select" id="dishCatInput">' +
+          '<option value="">请选择分类</option>' + catsOpt +
+        '</select>' +
+      '</div>' +
+      '<div class="field">' +
+        '<label>菜品名称 <span style="color:var(--danger)">*</span></label>' +
+        '<input class="field-input" id="dishNameInput" placeholder="请输入菜品名称" value="' + (dish ? dish.name : '') + '" />' +
+      '</div>' +
+      '<div class="field">' +
+        '<label>菜品图片</label>' +
+        '<div class="img-upload-zone" onclick="triggerImgUpload()">' +
+          '<input type="file" id="imgFileInput" accept="image/*" multiple style="width:100%;height:100%;position:absolute;top:0;left:0;opacity:0;cursor:pointer" onchange="handleImgUpload(this)" />' +
+          '<div class="img-upload-icon">📷</div>' +
+          '<div class="img-upload-text">点击上传图片（支持多张，JPG/PNG/WebP）</div>' +
+        '</div>' +
+        '<div class="img-preview-list" id="imgPreviewList"></div>' +
+        '<div class="field-hint">已添加 <span id="imgCount">' + keepImageUrls.length + '</span> 张图片</div>' +
+      '</div>' +
+      '<div class="field">' +
+        '<label>上架状态</label>' +
+        '<select class="field-select" id="dishStatusInput">' +
+          '<option value="on"' + (!dish || dish.status === 'on' ? ' selected' : '') + '>上架（H5端展示）</option>' +
+          '<option value="off"' + (dish && dish.status === 'off' ? ' selected' : '') + '>下架（H5端隐藏）</option>' +
+        '</select>' +
+      '</div>',
+      '<button class="btn btn-outline" onclick="closeModal()">取消</button>' +
+      '<button class="btn btn-primary" onclick="saveDish()">保存菜品</button>'
+    );
+    renderImgPreviews();
+  }
+
+  function triggerImgUpload() {
+    document.getElementById('imgFileInput').click();
+  }
+
+  function handleImgUpload(input) {
+    var files = Array.from(input.files);
+    files.forEach(function(file) {
+      pendingImageFiles.push(file);
+    });
+    renderImgPreviews();
+    input.value = '';
+  }
+
+  function renderImgPreviews() {
+    var list = document.getElementById('imgPreviewList');
+    if (!list) return;
+    list.innerHTML = '';
+
+    // 先渲染保留的旧图 URL
+    for (var i = 0; i < keepImageUrls.length; i++) {
+      var el = document.createElement('div');
+      el.className = 'img-preview-item';
+      el.innerHTML = '<img src="' + keepImageUrls[i] + '" alt="图'+(i+1)+'" /><button class="img-preview-del" onclick="removeKeepImg(' + i + ')">✕</button>';
+      list.appendChild(el);
+    }
+    // 再渲染新上传的文件预览
+    for (var j = 0; j < pendingImageFiles.length; j++) {
+      var url = URL.createObjectURL(pendingImageFiles[j]);
+      var el2 = document.createElement('div');
+      el2.className = 'img-preview-item';
+      el2.innerHTML = '<img src="' + url + '" alt="新图'+(j+1)+'" /><button class="img-preview-del" onclick="removeNewImg(' + j + ')">✕</button>';
+      list.appendChild(el2);
+    }
+
+    var cnt = document.getElementById('imgCount');
+    if (cnt) cnt.textContent = keepImageUrls.length + pendingImageFiles.length;
+  }
+
+  window.removeKeepImg = function(idx) {
+    keepImageUrls.splice(idx, 1);
+    renderImgPreviews();
+  };
+  window.removeNewImg = function(idx) {
+    pendingImageFiles.splice(idx, 1);
+    renderImgPreviews();
+  };
+
+  async function saveDish() {
+    var catId = parseInt(document.getElementById('dishCatInput').value);
+    var name = document.getElementById('dishNameInput').value.trim();
+    var status = document.getElementById('dishStatusInput').value;
+    if (!catId) { showToast('请选择所属分类', 'error'); return; }
+    if (!name) { showToast('请输入菜品名称', 'error'); return; }
+
+    if (editingId) {
+      await DB.updateDish(editingId, { categoryId: catId, name: name, status: status }, pendingImageFiles, keepImageUrls);
+      showToast('菜品已更新');
+    } else {
+      await DB.addDish({ categoryId: catId, name: name, status: status }, pendingImageFiles);
+      showToast('菜品新增成功');
+    }
+    closeModal();
+    renderDishList();
+  }
+
+  async function toggleDish(id) {
+    var dishes = await DB.getDishes();
+    var dish = dishes.find(function(d) { return d.id === id; });
+    var newStatus = dish.status === 'on' ? 'off' : 'on';
+    await DB.updateDish(id, { status: newStatus });
+    showToast(newStatus === 'on' ? '菜品已上架' : '菜品已下架');
+    renderDishList();
+  }
+
+  function delDish(id, name) {
+    confirmDlg('确认删除菜品「' + name + '」？此操作不可恢复。', async function() {
+      await DB.deleteDish(id);
+      showToast('菜品已删除');
+      renderDishList();
+    });
+  }
+
+  /* ========================
+     用户管理
+  ======================== */
+  function renderUserPage() {
+    document.getElementById('contentPanel').innerHTML = `
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">管理员账号列表</div>
+          <button class="btn btn-primary" onclick="openUserModal()">＋ 新增账号</button>
+        </div>
+        <div class="filter-bar">
+          <input class="filter-input" id="userKeyword" placeholder="搜索用户名或姓名..." oninput="renderUserList()" />
+        </div>
+        <div class="table-wrap" id="userTableWrap"></div>
+      </div>
+    `;
+    renderUserList();
+  }
+
+  async function renderUserList() {
+    var kwEl = document.getElementById('userKeyword');
+    var kw = (kwEl ? kwEl.value : '').toLowerCase();
+    var admins = await DB.getAdmins();
+    if (kw) admins = admins.filter(function(a) {
+      return a.username.toLowerCase().indexOf(kw) !== -1 || a.name.toLowerCase().indexOf(kw) !== -1;
+    });
+
+    const tbody = admins.length === 0
+      ? '<tr class="empty-row"><td colspan="5">暂无账号数据</td></tr>'
+      : admins.map(a => `
+          <tr>
+            <td>
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:36px;height:36px;background:linear-gradient(135deg,var(--primary),var(--accent));border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px">${a.name[0]}</div>
+                <div><div style="font-weight:600">${a.name}</div><div style="font-size:12px;color:var(--text-muted)">${a.username}</div></div>
+              </div>
+            </td>
+            <td>${a.username}</td>
+            <td><span style="color:var(--text-muted);font-size:12px">●●●●●●</span></td>
+            <td>${a.createdAt || '-'}</td>
+            <td>
+              <div style="display:flex;gap:6px">
+                <button class="btn btn-outline btn-sm" onclick="openUserModal(${a.id})">编辑</button>
+                ${a.id === (currentUser && currentUser.id)
+                  ? '<span style="font-size:12px;color:var(--text-muted);padding:5px">（当前账号）</span>'
+                  : `<button class="btn btn-danger btn-sm" onclick="delUser(${a.id},'${a.name}')">删除</button>`}
+              </div>
+            </td>
+          </tr>
+        `).join('');
+
+    document.getElementById('userTableWrap').innerHTML = `
+      <table>
+        <thead><tr><th>姓名</th><th>用户名</th><th>密码</th><th>创建时间</th><th>操作</th></tr></thead>
+        <tbody>${tbody}</tbody>
+      </table>
+    `;
+  }
+
+  async function openUserModal(id) {
+    var admins = await DB.getAdmins();
+    var admin = id ? admins.find(function(a) { return a.id === id; }) : null;
+    editingId = id || null;
+    openModal(
+      id ? '编辑账号' : '新增账号',
+      `<div class="field">
+        <label>姓名 <span style="color:var(--danger)">*</span></label>
+        <input class="field-input" id="adminNameInput" placeholder="请输入真实姓名" value="${admin ? admin.name : ''}" />
+      </div>
+      <div class="field">
+        <label>用户名 <span style="color:var(--danger)">*</span></label>
+        <input class="field-input" id="adminUserInput" placeholder="请输入登录用户名" value="${admin ? admin.username : ''}" />
+      </div>
+      <div class="field">
+        <label>密码 ${id ? '<span style="color:var(--text-muted);font-weight:400">（不填则保留原密码）</span>' : '<span style="color:var(--danger)">*</span>'}</label>
+        <input class="field-input" id="adminPassInput" type="password" placeholder="${id ? '不修改请留空' : '请设置登录密码'}" />
+      </div>`,
+      `<button class="btn btn-outline" onclick="closeModal()">取消</button>
+       <button class="btn btn-primary" onclick="saveUser()">保存</button>`
+    );
+  }
+
+  async function saveUser() {
+    var name = document.getElementById('adminNameInput').value.trim();
+    var username = document.getElementById('adminUserInput').value.trim();
+    var password = document.getElementById('adminPassInput').value.trim();
+    if (!name) { showToast('请输入姓名', 'error'); return; }
+    if (!username) { showToast('请输入用户名', 'error'); return; }
+    if (!editingId && !password) { showToast('请设置密码', 'error'); return; }
+
+    var admins = await DB.getAdmins();
+    var dup = admins.find(function(a) { return a.username === username && a.id !== editingId; });
+    if (dup) { showToast('用户名已存在', 'error'); return; }
+
+    if (editingId) {
+      var updates = { name: name, username: username };
+      if (password) updates.password = password;
+      await DB.updateAdmin(editingId, updates);
+      showToast('账号已更新');
+    } else {
+      await DB.addAdmin({ name: name, username: username, password: password });
+      showToast('账号新增成功');
+    }
+    closeModal();
+    renderUserList();
+  }
+
+  function delUser(id, name) {
+    confirmDlg('确认删除管理员账号「' + name + '」？删除后该账号将无法登录后台。', async function() {
+      await DB.deleteAdmin(id);
+      showToast('账号已删除');
+      renderUserList();
+    });
+  }
+
+  /* ========================
+     点击遮罩关闭弹窗
+  ======================== */
+  document.getElementById('modalOverlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('modalOverlay')) closeModal();
+  });
+</script>
+</body>
+</html>

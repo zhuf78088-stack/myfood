@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>今天吃点啥呀</title>
+  <style>
+    :root {
+      --primary: #6B3A1F;
+      --teal: #4AADA0;
+      --bg: #F5F0EB;
+      --hero-bg: #F7EFE5;
+      --card-bg: #FFFFFF;
+      --text-main: #2C1A0E;
+      --text-sub: #7A5A40;
+      --text-muted: #B09078;
+      --border: #E8D4C8;
+      --shadow-card: 0 2px 10px rgba(100,60,20,0.08);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      min-height: 100vh;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+    .hero {
+      background: var(--hero-bg);
+      text-align: center;
+      padding: 28px 20px 20px;
+      position: relative;
+    }
+    .hero-admin {
+      position: absolute; top: 14px; right: 16px;
+      font-size: 11px; color: var(--text-muted);
+      text-decoration: none;
+      padding: 4px 10px; border: 1px solid var(--border); border-radius: 12px;
+      background: rgba(255,255,255,0.6);
+    }
+    .hero-title { font-size: 28px; font-weight: 800; color: var(--primary); letter-spacing: 2px; margin-bottom: 6px; }
+    .hero-sub { font-size: 13px; color: var(--text-sub); margin-bottom: 12px; }
+    .hero-count {
+      display: inline-flex; align-items: center;
+      background: rgba(107,58,31,0.08); color: var(--primary);
+      font-size: 13px; font-weight: 600; padding: 5px 16px; border-radius: 20px; gap: 4px;
+    }
+    .search-section { padding: 12px 16px 0; background: var(--hero-bg); }
+    .search-box {
+      display: flex; align-items: center; background: #fff;
+      border-radius: 24px; padding: 10px 16px; gap: 8px;
+      box-shadow: 0 2px 12px rgba(100,60,20,0.1);
+    }
+    .search-icon { color: var(--text-muted); font-size: 15px; flex-shrink: 0; }
+    .search-box input { flex: 1; border: none; outline: none; font-size: 14px; background: transparent; color: var(--text-main); }
+    .search-box input::placeholder { color: var(--text-muted); }
+    .search-clear {
+      display: none; width: 20px; height: 20px; border-radius: 50%;
+      background: #EEE; border: none; font-size: 12px; cursor: pointer;
+      flex-shrink: 0; align-items: center; justify-content: center; color: #999;
+    }
+    .search-clear.show { display: flex; }
+    .cat-bar-wrap { background: var(--hero-bg); padding: 12px 12px 14px; }
+    .cat-bar { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+    .cat-bar::-webkit-scrollbar { display: none; }
+    .cat-pill {
+      flex-shrink: 0; display: flex; align-items: center; gap: 5px;
+      padding: 7px 14px; border-radius: 20px; font-size: 13px; font-weight: 500;
+      cursor: pointer; white-space: nowrap; user-select: none;
+      border: 1.5px solid var(--border); background: var(--card-bg); color: var(--text-sub);
+      transition: all 0.18s;
+    }
+    .cat-pill.active { background: var(--primary); color: #fff; border-color: var(--primary); font-weight: 700; }
+    .main-content { padding: 12px 12px 80px; background: var(--bg); }
+    .section-head {
+      display: flex; align-items: center; gap: 8px;
+      margin: 16px 0 10px;
+    }
+    .section-head:first-child { margin-top: 4px; }
+    .section-emoji { font-size: 20px; }
+    .section-name { font-size: 17px; font-weight: 800; color: var(--teal); }
+    .section-cnt { font-size: 13px; color: var(--text-muted); }
+    .dish-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .dish-card {
+      background: var(--card-bg); border-radius: 14px;
+      overflow: hidden; box-shadow: var(--shadow-card);
+      cursor: pointer; transition: transform 0.18s;
+      animation: fadeUp 0.4s ease both;
+    }
+    .dish-card:active { transform: scale(0.96); }
+    .dish-card.hidden { display: none; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+    .dish-img-wrap { position: relative; padding-top: 76%; overflow: hidden; background: #F0E8DF; }
+    .dish-img-wrap img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .dish-no-img {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      font-size: 36px; background: #F7EFE5; opacity: 0.5;
+    }
+    .dish-info { padding: 9px 10px 10px; }
+    .dish-name { font-size: 14px; font-weight: 600; color: var(--text-main); line-height: 1.4; margin-bottom: 5px; }
+    .dish-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+    .dish-tag { font-size: 10px; color: var(--text-muted); background: var(--bg); border: 1px solid var(--border); padding: 2px 7px; border-radius: 8px; }
+    .empty-state { display: none; text-align: center; padding: 60px 20px 40px; color: var(--text-muted); }
+    .empty-state.show { display: block; }
+    .empty-icon { font-size: 52px; margin-bottom: 10px; }
+    .preview-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92);
+      z-index: 1000; flex-direction: column; align-items: center; justify-content: center;
+      gap: 14px; padding: 20px;
+    }
+    .preview-overlay.show { display: flex; }
+    .preview-img { max-width: 94vw; max-height: 70vh; border-radius: 12px; object-fit: contain; }
+    .preview-name { color: #fff; font-size: 16px; font-weight: 600; }
+    .preview-close {
+      position: absolute; top: 16px; right: 16px;
+      width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.15);
+      color: #fff; border: none; font-size: 20px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #topBtn {
+      position: fixed; bottom: 22px; right: 16px;
+      width: 42px; height: 42px; background: var(--primary); color: #fff;
+      border: none; border-radius: 50%; font-size: 18px; cursor: pointer;
+      box-shadow: 0 4px 14px rgba(107,58,31,0.35);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; transform: translateY(8px);
+      transition: opacity 0.3s, transform 0.3s; z-index: 200;
+    }
+    #topBtn.show { opacity: 1; transform: translateY(0); }
+    .sticky-header { position: sticky; top: 0; z-index: 100; }
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <a href="admin.html" class="hero-admin">管理</a>
+  <div class="hero-title">今天吃点啥呀</div>
+  <div class="hero-sub">@小葡萄的美食 · 菜谱图鉴</div>
+  <div class="hero-count">共 <span id="heroCount">0</span> 道菜品</div>
+</div>
+
+<div class="sticky-header">
+  <div class="search-section">
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="搜一道你想吃的菜..." autocomplete="off" />
+      <button class="search-clear" id="searchClear">✕</button>
+    </div>
+  </div>
+  <div class="cat-bar-wrap">
+    <div class="cat-bar" id="catBar"></div>
+  </div>
+</div>
+
+<div class="main-content" id="mainContent"></div>
+
+<div class="empty-state" id="emptyState">
+  <div class="empty-icon">🍽️</div>
+  <div class="empty-text" id="emptyText">没有找到相关菜品</div>
+  <div class="empty-hint">试试其他关键词吧~</div>
+</div>
+
+<div class="preview-overlay" id="previewOverlay">
+  <button class="preview-close" onclick="closePreview()">✕</button>
+  <img class="preview-img" id="previewImg" src="" alt="" />
+  <div class="preview-name" id="previewName"></div>
+</div>
+
+<button id="topBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<script src="data.js"></script>
+<script>
+(async function(){
+  "use strict";
+
+  var currentCat = "all";
+  var currentKeyword = "";
+
+  var CAT_EMOJI_MAP = [
+    [/主食|饭|面|粥|饼/, '🍚'], [/炒|小炒/, '🥘'], [/汤|羹|煲/, '🍲'],
+    [/凉|拌|冷/, '🥗'], [/甜|饮|奶|茶|咖/, '🧋'], [/海鲜|鱼|虾|蟹|贝/, '🦐'],
+    [/禽|鸡|鸭|鹅/, '🍗'], [/肉|猪|牛|羊/, '🥩'], [/蔬|菜|豆|瓜/, '🥦'],
+    [/点心|小吃|零食/, '🍡']
+  ];
+  function getCatEmoji(name) {
+    for (var i = 0; i < CAT_EMOJI_MAP.length; i++) {
+      if (CAT_EMOJI_MAP[i][0].test(name)) return CAT_EMOJI_MAP[i][1];
+    }
+    return '🍽️';
+  }
+
+  // =========================================================
+  // 核心：过滤逻辑（先定义，避免裸调用问题）
+  // =========================================================
+  function applyFilters() {
+    var blocks = document.querySelectorAll('#mainContent .cat-section-block');
+    var visibleTotal = 0;
+
+    for (var i = 0; i < blocks.length; i++) {
+      var sec = blocks[i];
+      var catName = sec.dataset.category || '';
+
+      if (currentCat !== 'all' && catName !== currentCat) {
+        sec.style.display = 'none';
+        continue;
+      }
+
+      var cards = sec.querySelectorAll('.dish-card');
+      var secHasVisible = false;
+
+      for (var j = 0; j < cards.length; j++) {
+        var card = cards[j];
+        var name = (card.dataset.name || '').toLowerCase();
+        var matched = !currentKeyword || name.indexOf(currentKeyword) !== -1;
+        if (matched) {
+          card.classList.remove('hidden');
+          secHasVisible = true;
+          visibleTotal++;
+        } else {
+          card.classList.add('hidden');
+        }
+      }
+      sec.style.display = secHasVisible ? '' : 'none';
+    }
+
+    var emptyEl = document.getElementById('emptyState');
+    if (visibleTotal === 0) {
+      emptyEl.classList.add('show');
+      document.getElementById('emptyText').textContent =
+        currentKeyword ? '没有找到相关菜品' : '该分类暂无菜品，敬请期待~';
+    } else {
+      emptyEl.classList.remove('show');
+    }
+  }
+
+  // =========================================================
+  // 切换分类
+  // =========================================================
+  function selectCat(cat, el) {
+    currentCat = cat;
+    var pills = document.querySelectorAll('.cat-pill');
+    for (var i = 0; i < pills.length; i++) {
+      pills[i].classList.remove('active');
+    }
+    if (el) el.classList.add('active');
+    applyFilters();
+    if (el && el.scrollIntoView) {
+      try { el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }); } catch(e) {}
+    }
+    updateHeroCount();
+  }
+  window.selectCat = selectCat;
+
+  // =========================================================
+  // 图片预览
+  // =========================================================
+  function openPreview(src, name) {
+    document.getElementById('previewImg').src = src;
+    document.getElementById('previewName').textContent = name;
+    document.getElementById('previewOverlay').classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+  function closePreview() {
+    document.getElementById('previewOverlay').classList.remove('show');
+    document.body.style.overflow = '';
+  }
+  window.openPreview = openPreview;
+  window.closePreview = closePreview;
+
+  // =========================================================
+  // Hero 计数
+  // =========================================================
+  async function updateHeroCount() {
+    try {
+      var dishes = await DB.getDishes({ status: 'on' });
+      document.getElementById('heroCount').textContent = dishes.length;
+    } catch (e) { console.error(e); }
+  }
+
+  // =========================================================
+  // 构建分类区块（异步：从 API 拉取数据）
+  // =========================================================
+  async function buildAllSections() {
+    var main = document.getElementById('mainContent');
+    var cats = await DB.getCategories();
+    cats = cats.filter(function(c) { return c.enabled; });
+    var allDishes = await DB.getDishes({ status: 'on' });
+
+    main.innerHTML = '';
+
+    for (var ci = 0; ci < cats.length; ci++) {
+      var cat = cats[ci];
+      var catDishes = [];
+      for (var di = 0; di < allDishes.length; di++) {
+        if (Number(allDishes[di].categoryId) === Number(cat.id)) {
+          catDishes.push(allDishes[di]);
+        }
+      }
+      if (catDishes.length === 0) continue;
+
+      var section = document.createElement('div');
+      section.className = 'cat-section-block';
+      section.style.marginBottom = '8px';
+      section.dataset.category = cat.name;
+
+      var head = document.createElement('div');
+      head.className = 'section-head';
+      head.innerHTML =
+        '<span class="section-emoji">' + getCatEmoji(cat.name) + '</span>' +
+        '<span class="section-name">' + cat.name + '</span>' +
+        '<span class="section-cnt">' + catDishes.length + '道</span>';
+      section.appendChild(head);
+
+      var grid = document.createElement('div');
+      grid.className = 'dish-grid';
+
+      for (var fi = 0; fi < catDishes.length; fi++) {
+        var d = catDishes[fi];
+        var card = document.createElement('div');
+        card.className = 'dish-card';
+        card.dataset.name = d.name;
+        card.dataset.category = cat.name;
+
+        var imgSrc = (d.images && d.images[0]) ? d.images[0] : '';
+        // 所有图片都是服务器 URL 或外链，直接使用
+        var hasImg = !!imgSrc;
+
+        card.innerHTML =
+          '<div class="dish-img-wrap">' +
+            (hasImg ? '<img src="' + imgSrc + '" alt="' + d.name + '" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'" />' : '') +
+            '<div class="dish-no-img" style="display:' + (hasImg ? 'none' : 'flex') + '">🍽️</div>' +
+          '</div>' +
+          '<div class="dish-info">' +
+            '<div class="dish-name">' + d.name + '</div>' +
+            '<div class="dish-tags"><span class="dish-tag">' + cat.name + '</span></div>' +
+          '</div>';
+
+        if (hasImg) {
+          card.onclick = (function(src, nm) {
+            return function() { openPreview(src, nm); };
+          })(imgSrc, d.name);
+        }
+        grid.appendChild(card);
+      }
+
+      section.appendChild(grid);
+      main.appendChild(section);
+    }
+  }
+
+  // =========================================================
+  // 构建分类 tab
+  // =========================================================
+  async function renderCatTabs() {
+    var cats = await DB.getCategories();
+    cats = cats.filter(function(c) { return c.enabled; });
+    var bar = document.getElementById('catBar');
+    bar.innerHTML = '';
+
+    // 全部 tab
+    var allDishes = await DB.getDishes({ status: 'on' });
+    var allCount = allDishes.length;
+    var allPill = document.createElement('div');
+    allPill.className = 'cat-pill' + (currentCat === 'all' ? ' active' : '');
+    allPill.dataset.cat = 'all';
+    allPill.innerHTML = '全部 <span style="opacity:0.7">(' + allCount + ')</span>';
+    allPill.onclick = (function(p) { return function() { selectCat('all', p); }; })(allPill);
+    bar.appendChild(allPill);
+
+    // 各分类 tab
+    for (var i = 0; i < cats.length; i++) {
+      var c = cats[i];
+      var dishes = await DB.getDishes({ status: 'on', categoryId: c.id });
+      var cnt = dishes.length;
+      var pill = document.createElement('div');
+      pill.className = 'cat-pill' + (currentCat === c.name ? ' active' : '');
+      pill.dataset.cat = c.name;
+      pill.innerHTML = '<span style="margin-right:3px">' + getCatEmoji(c.name) + '</span>' + c.name + ' <span style="opacity:0.7">(' + cnt + ')</span>';
+      pill.onclick = (function(catName, pillEl) {
+        return function() { selectCat(catName, pillEl); };
+      })(c.name, pill);
+      bar.appendChild(pill);
+    }
+  }
+
+  // =========================================================
+  // 搜索
+  // =========================================================
+  var searchInput = document.getElementById('searchInput');
+  var searchClear = document.getElementById('searchClear');
+
+  searchInput.addEventListener('input', function() {
+    currentKeyword = this.value.trim().toLowerCase();
+    searchClear.classList.toggle('show', currentKeyword.length > 0);
+    applyFilters();
+  });
+
+  function clearSearch() {
+    searchInput.value = '';
+    currentKeyword = '';
+    searchClear.classList.remove('show');
+    applyFilters();
+    searchInput.focus();
+  }
+  window.clearSearch = clearSearch;
+
+  searchClear.addEventListener('click', clearSearch);
+
+  // =========================================================
+  // 初始化（异步：从 API 拉取数据）
+  // =========================================================
+  await buildAllSections();
+  await renderCatTabs();
+  applyFilters();
+  await updateHeroCount();
+
+  // 回到顶部
+  window.addEventListener('scroll', function() {
+    document.getElementById('topBtn').classList.toggle('show', window.scrollY > 300);
+  });
+
+})();
+</script>
+</body>
+</html>
