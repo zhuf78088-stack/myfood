@@ -1,100 +1,32 @@
 /**
- * 美食册子 - 后端服务器
- * Express + JSON 文件存储 + multer 图片上传
+ * 美食册子 - 后端服务器（Supabase 版）
+ * Express + Supabase PostgreSQL + multer 图片上传
  */
 
 const express = require('express');
 const multer = require('multer');
 const cors = require('cors');
 const path = require('path');
-const fs = require('fs');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DATA_DIR = process.env.DATA_DIR || path.join(__dirname);
+
+// Supabase 配置
+const supabaseUrl = process.env.SUPABASE_URL || 'https://mptmpholnizmbxmimxhn.supabase.co';
+const supabaseKey = process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wdG1waG9sbml6bWJ4bWlteGhuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4NTE3MzgsImV4cCI6MjA5NzQyNzczOH0.RC5rXrt6GpwTVldoErnPbbQnoZDHwfp3Dr8bB8RnKIE';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 // ============ 中间件 ============
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
-app.use(express.static(path.join(__dirname, 'public')));  // 静态前端
-app.use('/uploads', express.static(path.join(DATA_DIR, 'uploads'))); // 图片（持久盘）
+app.use(express.static(path.join(__dirname, 'public')));
 
-// ============ 数据库（JSON 文件，存于持久盘）============
-const DB_PATH = path.join(DATA_DIR, 'data.json');
-
-const DEFAULT_DATA = {
-  admins: [
-    { id: 1, username: 'admin', password: 'admin123', name: '超级管理员', createdAt: '2026-01-01' }
-  ],
-  categories: [
-    { id: 1, name: '招牌主食', order: 1, enabled: true },
-    { id: 2, name: '精选小炒', order: 2, enabled: true },
-    { id: 3, name: '汤羹煲类', order: 3, enabled: true },
-    { id: 4, name: '特色凉菜', order: 4, enabled: true },
-    { id: 5, name: '甜品饮品', order: 5, enabled: true }
-  ],
-  dishes: [
-    { id: 1, categoryId: 1, name: '红烧肉盖饭', status: 'on',
-      images: ['https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400&q=80'],
-      order: 1, createdAt: '2026-01-05' },
-    { id: 2, categoryId: 1, name: '扬州炒饭', status: 'on',
-      images: ['https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=400&q=80'],
-      order: 2, createdAt: '2026-01-06' },
-    { id: 3, categoryId: 2, name: '番茄炒蛋', status: 'on',
-      images: ['https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400&q=80'],
-      order: 1, createdAt: '2026-01-07' },
-    { id: 4, categoryId: 2, name: '宫保鸡丁', status: 'on',
-      images: ['https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?w=400&q=80'],
-      order: 2, createdAt: '2026-01-08' },
-    { id: 5, categoryId: 2, name: '鱼香肉丝', status: 'on',
-      images: ['https://images.unsplash.com/photo-1547592180-85f173990554?w=400&q=80'],
-      order: 3, createdAt: '2026-01-09' },
-    { id: 6, categoryId: 3, name: '酸辣汤', status: 'on',
-      images: ['https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=400&q=80'],
-      order: 1, createdAt: '2026-01-10' },
-    { id: 7, categoryId: 3, name: '老火靓汤', status: 'on',
-      images: ['https://images.unsplash.com/photo-1613844237701-8f3664fc2eff?w=400&q=80'],
-      order: 2, createdAt: '2026-01-11' },
-    { id: 8, categoryId: 4, name: '夫妻肺片', status: 'on',
-      images: ['https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=400&q=80'],
-      order: 1, createdAt: '2026-01-12' },
-    { id: 9, categoryId: 5, name: '芒果班戟', status: 'on',
-      images: ['https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=400&q=80'],
-      order: 1, createdAt: '2026-01-13' },
-    { id: 10, categoryId: 5, name: '杨枝甘露', status: 'on',
-      images: ['https://images.unsplash.com/photo-1627308595229-7830a5c91f9f?w=400&q=80'],
-      order: 2, createdAt: '2026-01-14' }
-  ]
-};
-
-let nextId = 100;
-
-function loadDB() {
-  if (!fs.existsSync(DB_PATH)) {
-    // 首次启动，写入默认数据
-    saveDB(DEFAULT_DATA);
-    return JSON.parse(JSON.stringify(DEFAULT_DATA));
-  }
-  const raw = fs.readFileSync(DB_PATH, 'utf-8');
-  return JSON.parse(raw);
-}
-
-function saveDB(data) {
-  fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf-8');
-}
-
-// 启动时加载
-let db = loadDB();
-
-// 生成唯一 ID
-function genId() {
-  nextId++;
-  return nextId;
-}
-
-// ============ 图片上传配置 ============
-const uploadsDir = path.join(DATA_DIR, 'uploads');
+// 图片上传（本地临时存储，后续可迁移到 Supabase Storage）
+const uploadsDir = path.join(__dirname, 'uploads');
+const fs = require('fs');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+app.use('/uploads', express.static(uploadsDir));
 
 const storage = multer.diskStorage({
   destination: uploadsDir,
@@ -115,184 +47,173 @@ const upload = multer({
 // ============ API 路由 ============
 
 // --- 登录 ---
-app.post('/api/login', (req, res) => {
-  const { username, password } = req.body;
-  db = loadDB();
-  const admin = (db.admins || []).find(a => a.username === username && a.password === password);
-  if (!admin) return res.status(401).json({ error: '用户名或密码错误' });
-  const { password: _, ...safe } = admin;
-  res.json({ admin: safe });
+app.post('/api/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    const { data, error } = await supabase
+      .from('admins').select('*')
+      .eq('username', username).eq('password', password).single();
+    if (error || !data) return res.status(401).json({ error: '用户名或密码错误' });
+    const { password: _, ...safe } = data;
+    res.json({ admin: safe });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // --- 管理员 CRUD ---
-app.get('/api/admins', (req, res) => {
-  db = loadDB();
-  const admins = (db.admins || []).map(a => { const { password: _, ...safe } = a; return safe; });
-  res.json(admins);
+app.get('/api/admins', async (req, res) => {
+  try {
+    const { data } = await supabase.from('admins').select('id,username,name,created_at');
+    res.json(data || []);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/admins', (req, res) => {
-  db = loadDB();
-  const { username, password, name } = req.body;
-  if (!username || !password) return res.status(400).json({ error: '用户名和密码不能为空' });
-  if ((db.admins || []).find(a => a.username === username)) {
-    return res.status(400).json({ error: '用户名已存在' });
-  }
-  const admin = { id: genId(), username, password, name: name || username, createdAt: new Date().toISOString().slice(0, 10) };
-  db.admins = db.admins || [];
-  db.admins.push(admin);
-  saveDB(db);
-  const { password: _, ...safe } = admin;
-  res.json(safe);
+app.post('/api/admins', async (req, res) => {
+  try {
+    const { username, password, name } = req.body;
+    if (!username || !password) return res.status(400).json({ error: '用户名和密码不能为空' });
+    const { data: exist } = await supabase.from('admins').select('id').eq('username', username).single();
+    if (exist) return res.status(400).json({ error: '用户名已存在' });
+    const { data, error } = await supabase.from('admins').insert({
+      username, password, name: name || username, created_at: new Date().toISOString().slice(0, 10)
+    }).select('id,username,name,created_at').single();
+    if (error) throw error;
+    res.json(data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.put('/api/admins/:id', (req, res) => {
-  db = loadDB();
-  const id = parseInt(req.params.id);
-  const idx = (db.admins || []).findIndex(a => a.id === id);
-  if (idx === -1) return res.status(404).json({ error: '管理员不存在' });
-  const { name, password } = req.body;
-  if (name) db.admins[idx].name = name;
-  if (password) db.admins[idx].password = password;
-  saveDB(db);
-  const { password: _, ...safe } = db.admins[idx];
-  res.json(safe);
+app.put('/api/admins/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const updates = {};
+    if (req.body.name) updates.name = req.body.name;
+    if (req.body.password) updates.password = req.body.password;
+    const { data, error } = await supabase.from('admins').update(updates)
+      .eq('id', id).select('id,username,name,created_at').single();
+    if (error) throw error;
+    res.json(data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete('/api/admins/:id', (req, res) => {
-  db = loadDB();
-  const id = parseInt(req.params.id);
-  db.admins = (db.admins || []).filter(a => a.id !== id);
-  saveDB(db);
-  res.json({ success: true });
+app.delete('/api/admins/:id', async (req, res) => {
+  try {
+    await supabase.from('admins').delete().eq('id', req.params.id);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // --- 分类 CRUD ---
-app.get('/api/categories', (req, res) => {
-  db = loadDB();
-  const cats = (db.categories || []).sort((a, b) => a.order - b.order);
-  res.json(cats);
+app.get('/api/categories', async (req, res) => {
+  try {
+    const { data } = await supabase.from('categories').select('*').order('order');
+    res.json(data || []);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/categories', (req, res) => {
-  db = loadDB();
-  const { name } = req.body;
-  if (!name) return res.status(400).json({ error: '分类名称不能为空' });
-  const maxOrder = (db.categories || []).reduce((m, c) => Math.max(m, c.order), 0);
-  const cat = { id: genId(), name, order: maxOrder + 1, enabled: true };
-  db.categories = db.categories || [];
-  db.categories.push(cat);
-  saveDB(db);
-  res.json(cat);
+app.post('/api/categories', async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ error: '分类名称不能为空' });
+    const { data: maxData } = await supabase.from('categories').select('order').order('order', { ascending: false }).limit(1);
+    const maxOrder = (maxData && maxData.length > 0) ? maxData[0].order : 0;
+    const { data, error } = await supabase.from('categories').insert({
+      name, order: maxOrder + 1, enabled: true
+    }).select('*').single();
+    if (error) throw error;
+    res.json(data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.put('/api/categories/:id', (req, res) => {
-  db = loadDB();
-  const id = parseInt(req.params.id);
-  const idx = (db.categories || []).findIndex(c => c.id === id);
-  if (idx === -1) return res.status(404).json({ error: '分类不存在' });
-  Object.assign(db.categories[idx], req.body);
-  saveDB(db);
-  res.json(db.categories[idx]);
+app.put('/api/categories/:id', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('categories').update(req.body)
+      .eq('id', req.params.id).select('*').single();
+    if (error) throw error;
+    res.json(data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete('/api/categories/:id', (req, res) => {
-  db = loadDB();
-  const id = parseInt(req.params.id);
-  db.categories = (db.categories || []).filter(c => c.id !== id);
-  db.dishes = (db.dishes || []).filter(d => d.categoryId !== id);
-  saveDB(db);
-  res.json({ success: true });
+app.delete('/api/categories/:id', async (req, res) => {
+  try {
+    await supabase.from('categories').delete().eq('id', req.params.id);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // --- 菜品 CRUD ---
-app.get('/api/dishes', (req, res) => {
-  db = loadDB();
-  let dishes = db.dishes || [];
-  if (req.query.categoryId) {
-    const catId = parseInt(req.query.categoryId);
-    dishes = dishes.filter(d => d.categoryId === catId);
-  }
-  if (req.query.status) {
-    dishes = dishes.filter(d => d.status === req.query.status);
-  }
-  if (req.query.keyword) {
-    const kw = req.query.keyword.toLowerCase();
-    dishes = dishes.filter(d => d.name.toLowerCase().includes(kw));
-  }
-  res.json(dishes.sort((a, b) => a.order - b.order));
+app.get('/api/dishes', async (req, res) => {
+  try {
+    let query = supabase.from('dishes').select('*');
+    if (req.query.categoryId) query = query.eq('category_id', req.query.categoryId);
+    if (req.query.status) query = query.eq('status', req.query.status);
+    if (req.query.keyword) query = query.ilike('name', '%' + req.query.keyword + '%');
+    query = query.order('order');
+    const { data } = await query;
+    // 转换字段名为前端兼容格式
+    const dishes = (data || []).map(d => ({
+      id: d.id, categoryId: d.category_id, name: d.name,
+      status: d.status, images: d.images, order: d.order, createdAt: d.created_at
+    }));
+    res.json(dishes);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/dishes', upload.array('images', 10), (req, res) => {
-  db = loadDB();
-  const { categoryId, name, status } = req.body;
-  if (!categoryId || !name) return res.status(400).json({ error: '分类和名称不能为空' });
-  const catId = parseInt(categoryId);
-  const maxOrder = (db.dishes || [])
-    .filter(d => d.categoryId === catId)
-    .reduce((m, d) => Math.max(m, d.order), 0);
-  const images = (req.files || []).map(f => '/uploads/' + f.filename);
-  const dish = {
-    id: genId(),
-    categoryId: catId,
-    name,
-    status: status || 'on',
-    images,
-    order: maxOrder + 1,
-    createdAt: new Date().toISOString().slice(0, 10)
-  };
-  db.dishes = db.dishes || [];
-  db.dishes.push(dish);
-  saveDB(db);
-  res.json(dish);
+app.post('/api/dishes', upload.array('images', 10), async (req, res) => {
+  try {
+    const { categoryId, name, status } = req.body;
+    if (!categoryId || !name) return res.status(400).json({ error: '分类和名称不能为空' });
+    const catId = parseInt(categoryId);
+    const { data: maxData } = await supabase.from('dishes').select('order')
+      .eq('category_id', catId).order('order', { ascending: false }).limit(1);
+    const maxOrder = (maxData && maxData.length > 0) ? maxData[0].order : 0;
+    const images = (req.files || []).map(f => '/uploads/' + f.filename);
+    const dish = {
+      category_id: catId, name, status: status || 'on',
+      images, order: maxOrder + 1,
+      created_at: new Date().toISOString().slice(0, 10)
+    };
+    const { data, error } = await supabase.from('dishes').insert(dish).select('*').single();
+    if (error) throw error;
+    res.json({
+      id: data.id, categoryId: data.category_id, name: data.name,
+      status: data.status, images: data.images, order: data.order, createdAt: data.created_at
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.put('/api/dishes/:id', upload.array('images', 10), async (req, res) => {
-  db = loadDB();
-  const id = parseInt(req.params.id);
-  const idx = (db.dishes || []).findIndex(d => d.id === id);
-  if (idx === -1) return res.status(404).json({ error: '菜品不存在' });
+  try {
+    const id = req.params.id;
+    const updates = {};
+    if (req.body.categoryId) updates.category_id = parseInt(req.body.categoryId);
+    if (req.body.name) updates.name = req.body.name;
+    if (req.body.status) updates.status = req.body.status;
 
-  const { categoryId, name, status, keepImages } = req.body;
-  if (categoryId) db.dishes[idx].categoryId = parseInt(categoryId);
-  if (name) db.dishes[idx].name = name;
-  if (status) db.dishes[idx].status = status;
+    // 图片：保留旧图 + 新上传图
+    if (req.body.keepImages) {
+      try { updates.images = JSON.parse(req.body.keepImages); } catch (e) { updates.images = []; }
+    }
+    if (req.files && req.files.length > 0) {
+      updates.images = (updates.images || []).concat(req.files.map(f => '/uploads/' + f.filename));
+    }
 
-  // 处理图片：保留旧图 + 新增图
-  let newImages = [];
-  if (keepImages) {
-    try { newImages = JSON.parse(keepImages); } catch (e) { newImages = []; }
-  }
-  const uploadedUrls = (req.files || []).map(f => '/uploads/' + f.filename);
-  db.dishes[idx].images = newImages.concat(uploadedUrls);
-
-  saveDB(db);
-  res.json(db.dishes[idx]);
+    const { data, error } = await supabase.from('dishes').update(updates)
+      .eq('id', id).select('*').single();
+    if (error) throw error;
+    res.json({
+      id: data.id, categoryId: data.category_id, name: data.name,
+      status: data.status, images: data.images, order: data.order, createdAt: data.created_at
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete('/api/dishes/:id', (req, res) => {
-  db = loadDB();
-  const id = parseInt(req.params.id);
-  // 尝试删除本地图片文件
-  const dish = (db.dishes || []).find(d => d.id === id);
-  if (dish && dish.images) {
-    dish.images.forEach(img => {
-      if (img.startsWith('/uploads/')) {
-        const filePath = path.join(__dirname, img);
-        if (fs.existsSync(filePath)) {
-          try { fs.unlinkSync(filePath); } catch (e) {}
-        }
-      }
-    });
-  }
-  db.dishes = (db.dishes || []).filter(d => d.id !== id);
-  saveDB(db);
-  res.json({ success: true });
+app.delete('/api/dishes/:id', async (req, res) => {
+  try {
+    await supabase.from('dishes').delete().eq('id', req.params.id);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ============ 启动服务器 ============
 app.listen(PORT, () => {
-  console.log('美食册子服务器已启动: http://localhost:' + PORT);
-  console.log('  前台: http://localhost:' + PORT + '/index.html');
-  console.log('  后台: http://localhost:' + PORT + '/admin.html');
+  console.log('美食册子服务器已启动 (Supabase): http://localhost:' + PORT);
 });
