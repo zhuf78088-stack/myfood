@@ -984,6 +984,8 @@
     if (dragRow) dragRow.style.opacity = '1';
     dragRow = null;
   };
+
+  async function openCatModal(id) {
     var cats = await DB.getCategories();
     var cat = id ? cats.find(function(c) { return c.id === id; }) : null;
     editingId = id || null;
@@ -998,14 +1000,14 @@
     );
   }
 
-  function saveCat() {
-    const name = document.getElementById('catNameInput').value.trim();
+  async function saveCat() {
+    var name = document.getElementById('catNameInput').value.trim();
     if (!name) { showToast('请输入分类名称', 'error'); return; }
     if (editingId) {
-      DB.updateCategory(editingId, { name });
+      await DB.updateCategory(editingId, { name: name });
       showToast('分类已更新');
     } else {
-      DB.addCategory(name);
+      await DB.addCategory(name);
       showToast('分类新增成功');
     }
     closeModal();
@@ -1022,9 +1024,8 @@
   }
 
   function delCat(id, name) {
-    const cnt = DB.getDishes({ categoryId: id }).length;
-    confirmDlg(`确认删除分类「${name}」？${cnt > 0 ? `<br><br>⚠️ 该分类下有 <strong>${cnt}</strong> 道菜品，删除分类将<strong>同时删除</strong>所有关联菜品！` : ''}`, () => {
-      DB.deleteCategory(id);
+    confirmDlg('确认删除分类「' + name + '」？此操作不可恢复。', async function() {
+      await DB.deleteCategory(id);
       showToast('分类已删除');
       renderCategoryList();
     });
