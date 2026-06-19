@@ -11,15 +11,16 @@ const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname);
 
 // ============ 中间件 ============
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));  // 静态前端
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // 图片
+app.use('/uploads', express.static(path.join(DATA_DIR, 'uploads'))); // 图片（持久盘）
 
-// ============ 数据库（JSON 文件）============
-const DB_PATH = path.join(__dirname, 'data.json');
+// ============ 数据库（JSON 文件，存于持久盘）============
+const DB_PATH = path.join(DATA_DIR, 'data.json');
 
 const DEFAULT_DATA = {
   admins: [
@@ -92,7 +93,7 @@ function genId() {
 }
 
 // ============ 图片上传配置 ============
-const uploadsDir = path.join(__dirname, 'uploads');
+const uploadsDir = path.join(DATA_DIR, 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
 const storage = multer.diskStorage({
